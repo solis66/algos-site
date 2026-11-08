@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>力扣 239 · 滑动窗口最大值 — 单调队列断点调试可视化</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --accent: #2563eb;
+    --accent-bg: #dbeafe;
+    --green: #10b981;
+    --green-bg: #d1fae5;
+    --red: #ef4444;
+    --red-bg: #fee2e2;
+    --amber-bg: #fef3c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { margin-bottom: 20px; }
+  header h1 { font-size: 22px; margin-bottom: 6px; }
+  header p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  header code {
+    background: var(--accent-bg); color: var(--accent);
+    padding: 1px 5px; border-radius: 4px; font-size: 12px;
+  }
+
+  .layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 13px; color: var(--muted); margin-bottom: 10px; font-weight: 600; letter-spacing: 0.5px; }
+
+  /* ---------- 代码面板 ---------- */
+  .code-panel { position: sticky; top: 16px; }
+  .code-panel pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 11.5px; line-height: 1.75; overflow-x: auto;
+  }
+  .sec-title {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    background: #f0f6ff; border-left: 3px solid var(--accent);
+    padding: 4px 8px; margin: 10px 0 4px; border-radius: 0 4px 4px 0;
+  }
+  .sec-title:first-child { margin-top: 0; }
+  .code-line { display: flex; white-space: pre; border-radius: 4px; padding: 0 4px; }
+  .code-line .ln {
+    width: 30px; flex-shrink: 0; text-align: right; margin-right: 10px;
+    color: #94a3b8; user-select: none;
+  }
+  .code-line.active { background: var(--amber-bg); outline: 1px solid #f59e0b; }
+  .code-line.active .ln { color: #b45309; font-weight: 700; }
+  .code-line.has-bp .ln::after { content: " ●"; color: var(--red); font-size: 9px; }
+  .code-comment { color: #6a9955; }
+  .code-kw { color: #af00db; }
+
+  /* ---------- 数组面板 ---------- */
+  .array-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
+  .cell-box { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .cell {
+    min-width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+    background: #f1f5f9; border: 2px solid var(--border); border-radius: 8px;
+    font-size: 16px; font-weight: 600; transition: all .25s;
+  }
+  .cell .idx { font-size: 10px; color: var(--muted); font-weight: 400; }
+  .cell.in-window { background: var(--accent-bg); border-color: var(--accent); }
+  .cell.polling { background: var(--red-bg); border-color: var(--red); position: relative; }
+  .cell.adding  { background: var(--green-bg); border-color: var(--green); }
+  .cell-tag { font-size: 10px; height: 14px; }
+  .tag-poll { color: var(--red); font-weight: 700; }
+  .tag-add { color: var(--green); font-weight: 700; }
+
+  /* ---------- 队列面板 ---------- */
+  .deque-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 52px; }
+  .dq-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .dq-label b { color: var(--accent); }
+  .dq-cell {
+    min-width: 42px; height: 42px; padding: 0 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: #eff6ff; border: 2px solid #93c5fd; border-radius: 8px;
+    font-size: 15px; font-weight: 700; color: #1d4ed8; transition: all .25s;
+  }
+  .dq-cell.fresh { background: var(--green-bg); border-color: var(--green); color: #047857; }
+  .dq-cell.ghost {
+    background: var(--red-bg); border-color: var(--red); color: var(--red);
+    text-decoration: line-through; opacity: .75; transform: scale(.92);
+  }
+  .dq-empty { color: #cbd5e1; font-size: 13px; font-style: italic; }
+
+  /* ---------- 结果面板 ---------- */
+  .res-cell {
+    min-width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+    background: #f8fafc; border: 2px dashed var(--border); border-radius: 8px;
+    font-size: 16px; font-weight: 600; color: #cbd5e1; transition: all .25s;
+  }
+  .res-cell.filled { background: var(--green-bg); border: 2px solid var(--green); color: #047857; }
+
+  /* ---------- 变量条 ---------- */
+  .state-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .bp-badge {
+    background: var(--red-bg); color: var(--red); border: 1px solid #fca5a5;
+    font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .phase-badge {
+    background: var(--accent-bg); color: var(--accent); border: 1px solid #93c5fd;
+    font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .var-chip {
+    background: #f1f5f9; border: 1px solid var(--border); border-radius: 6px;
+    font-family: Consolas, monospace; font-size: 12px; padding: 4px 8px;
+  }
+  .var-chip b { color: var(--accent); }
+
+  /* ---------- 控制条 ---------- */
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .controls button {
+    padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: #fff; font-size: 13px; cursor: pointer; transition: all .15s;
+  }
+  .controls button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .controls button:disabled { opacity: .45; cursor: not-allowed; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls button.primary:hover:not(:disabled) { background: #1d4ed8; color: #fff; }
+  .progress { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .hint { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+
+  /* ---------- 调试日志 ---------- */
+  .log { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  .log-entry {
+    border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    background: #fff; font-size: 13px; transition: all .2s;
+  }
+  .log-entry.current { border-color: var(--accent); background: #f0f7ff; box-shadow: 0 0 0 2px var(--accent-bg); }
+  .log-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .log-no { color: #94a3b8; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .log-method { font-family: Consolas, monospace; font-weight: 700; color: var(--text); font-size: 13px; }
+  .log-bp { font-size: 11px; color: var(--red); background: var(--red-bg); padding: 1px 7px; border-radius: 999px; }
+  .log-vars { font-family: Consolas, monospace; font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
+  .log-vars b { color: var(--accent); font-weight: 600; }
+  .log-deque { font-family: Consolas, monospace; font-size: 11.5px; margin-bottom: 6px; color: var(--muted); }
+  .log-deque .chip {
+    display: inline-block; background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8;
+    border-radius: 4px; padding: 0 6px; margin: 0 1px; font-weight: 700;
+  }
+  .log-deque .chip.out { background: var(--red-bg); border-color: #fca5a5; color: var(--red); text-decoration: line-through; }
+  .log-explain { color: var(--text); line-height: 1.6; }
+
+  /* ---------- 总结面板 ---------- */
+  .summary { border: 2px solid var(--green); background: #f0fdf4; }
+  .summary h2 { color: #047857; font-size: 15px; margin-bottom: 10px; }
+  .summary ul { padding-left: 20px; font-size: 13px; line-height: 1.9; }
+  .summary code { background: #dcfce7; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>力扣 239 · 滑动窗口最大值 — 单调队列断点调试可视化</h1>
+    <p>
+      输入 <code>nums = [1,3,-1,-3,5,3,6,7]</code>，<code>k = 3</code>，期望输出 <code>[3,3,5,5,6,7]</code>。<br>
+      页面播放的是预设调试轨迹：每一步对应参考实现中的一个断点位置（代码面板中带 <span style="color:var(--red)">●</span> 的行）。
+      按「下一步」逐断点观察 <code>deque</code> 的变化。
+    </p>
+  </header>
+
+  <div class="layout">
+    <!-- 左列：代码 -->
+    <div>
+      <div class="card code-panel">
+        <h2>参考实现（仅展示含断点的函数 · ● = 建议打断点的行 · 黄色 = 当前停留行）</h2>
+        <pre id="codeBox"></pre>
+      </div>
+    </div>
+
+    <!-- 右列：可视化 + 控制 + 日志 -->
+    <div>
+      <div class="card">
+        <h2>原始数组 nums（蓝框 = 滑动窗口，红框 = 即将 poll 的左端，绿框 = 即将 add 的右端）</h2>
+        <div class="array-row" id="numsRow"></div>
+      </div>
+
+      <div class="card">
+        <h2>单调队列 deque（队头 FRONT 在左 —— 队头永远是当前窗口最大值）</h2>
+        <div class="deque-row" id="dequeRow"></div>
+      </div>
+
+      <div class="card">
+        <h2>结果数组 res（随 num++ 逐步填充）</h2>
+        <div class="array-row" id="resRow"></div>
+      </div>
+
+      <div class="card">
+        <div class="state-bar" id="stateBar"></div>
+        <div class="controls" style="margin-top:12px;">
+          <button id="btnPrev">⬅ 上一步</button>
+          <button id="btnNext" class="primary">下一步 ➡</button>
+          <button id="btnPlay">▶ 自动播放</button>
+          <button id="btnReset">⟲ 重置</button>
+          <span class="progress" id="progress"></span>
+        </div>
+        <p class="hint">快捷键：← / ←→ 方向键步进，空格键播放/暂停。</p>
+      </div>
+
+      <div class="card">
+        <h2>调试日志（对话式逐步记录）</h2>
+        <div class="log" id="log"></div>
+      </div>
+
+      <div class="card summary hidden" id="summary">
+        <h2>✅ 调试完成 — 总结</h2>
+        <ul>
+          <li>最终输出：<code>res = [3, 3, 5, 5, 6, 7]</code>，与期望一致。</li>
+          <li><b>时间复杂度 O(n)</b>：每个元素最多入队一次、出队一次（被挤或被 poll），虽然内层有 while，但均摊下来每个元素只被处理常数次。</li>
+          <li><b>易错点</b>：队列里存的不是整个窗口的内容，而是<b>「可能成为最大值的元素」</b>。例如窗口 [1,3,-1] 时队列只有 [3,-1] —— 1 在 3 入队时就被第 17 行挤掉了。</li>
+          <li><b>poll 的判断逻辑</b>：窗口左端元素移出时，只有它<b>恰好等于队头</b>（真的是当时的最大值）才需要 deque.poll()；否则它早已被 add 挤出队列，无需处理。</li>
+          <li><b>add 的挤尾逻辑</b>：新元素入队前挤掉队尾所有比它小的元素 —— 它们比新元素小且更早滑出窗口，不可能再成为任何后续窗口的最大值，这保证了队列单调递减、队头恒为最大值。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= 参考代码（行号与原文件一致） ================= */
+const CODE_LINES = [
+"//解法一",
+"//自定义数组",
+"class MyQueue {",
+"    Deque<Integer> deque = new LinkedList<>();",
+"    //弹出元素时，比较当前要弹出的数值是否等于队列出口的数值，如果相等则弹出",
+"    //同时判断队列当前是否为空",
+"    void poll(int val) {",
+"        if (!deque.isEmpty() && val == deque.peek()) {",
+"            deque.poll();",
+"        }",
+"    }",
+"    //添加元素时，如果要添加的元素大于入口处的元素，就将入口元素弹出",
+"    //保证队列元素单调递减",
+"    //比如此时队列元素3,1，2将要入队，比1大，所以1弹出，此时队列：3,2",
+"    void add(int val) {",
+"        while (!deque.isEmpty() && val > deque.getLast()) {",
+"            deque.removeLast();",
+"        }",
+"        deque.add(val);",
+"    }",
+"    //队列队顶元素始终为最大值",
+"    int peek() {",
+"        return deque.peek();",
+"    }",
+"}",
+"",
+"class Solution {",
+"    public int[] maxSlidingWindow(int[] nums, int k) {",
+"        if (nums.length == 1) {",
+"            return nums;",
+"        }",
+"        int len = nums.length - k + 1;",
+"        //存放结果元素的数组",
+"        int[] res = new int[len];",
+"        int num = 0;",
+"        //自定义队列",
+"        MyQueue myQueue = new MyQueue();",
+"        //先将前k的元素放入队列",
+"        for (int i = 0; i < k; i++) {",
+"            myQueue.add(nums[i]);",
+"        }",
+"        res[num++] = myQueue.peek();",
+"        for (int i = k; i < nums.length; i++) {",
+"            //滑动窗口移除最前面的元素，移除是判断该元素是否放入队列",
+"            myQueue.poll(nums[i - k]);",
+"            //滑动窗口加入最后面的元素",
+"            myQueue.add(nums[i]);",
+"            //记录对应的最大值",
+"            res[num++] = myQueue.peek();",
+"        }",
+"        return res;",
+"    }",
+"}"
+];
+const BP_LINES = [8, 16, 17, 19, 42, 49];
+
+/* 代码面板只展示包含断点的函数片段（start/end 为原文件行号，含端点） */
+const CODE_SECTIONS = [
+  { title: "MyQueue.poll(int val) — 窗口左端移出时的弹出判断", start: 7, end: 11 },
+  { title: "MyQueue.add(int val) — 挤掉队尾再入队，保证单调递减", start: 14, end: 20 },
+  { title: "Solution.maxSlidingWindow() — 主流程（节选）", start: 36, end: 50 }
+];
+
+/* ================= 断点名称映射 ================= */
+const BP_LABEL = {
+  L8:  "第 8 行 · poll() 的 if 判断",
+  L9:  "第 9 行 · deque.poll() 弹出队头",
+  L16: "第 16 行 · add() 的 while 条件判断",
+  L17: "第 17 行 · removeLast() 挤掉队尾",
+  L19: "第 19 行 · deque.add(val) 入队",
+  L42: "第 42 行 · 首窗口最大值写入 res",
+  L49: "第 49 行 · res[num++] 记录最大值"
+};
+
+/* ================= 预设调试轨迹（硬编码，队列状态为断点时刻的真实状态） =================
+   字段说明：
+   bp       断点代号        method  当前调用        phase 阶段
+   vars     断点处变量      deque   断点时刻队列（队头在左）
+   removed  本步被挤/弹出的元素  removedSide 'left'=队头弹出 / 'right'=队尾挤出
+   fresh    本步刚入队的元素（高亮）
+   window   窗口下标范围     pollIdx/addIdx 数组上标记的下标
+   num      已写入 res 的个数  explain 本步解释 */
+const STEPS = [
+  /* ---------- 初始化：前 k 个元素依次 add ---------- */
+  { bp:"L16", method:"add(1)", phase:"初始化窗口",
+    vars:{ "val":"1", "i":"0", "num":"0" },
+    deque:[], removed:[], removedSide:"right", fresh:null,
+    window:[0,0], pollIdx:null, addIdx:0, num:0,
+    explain:"队列为空，while 条件 !deque.isEmpty() && val > deque.getLast() 中 isEmpty 为 true，整个条件短路为 false，不进入循环，1 直接准备入队。" },
+  { bp:"L19", method:"add(1)", phase:"初始化窗口",
+    vars:{ "val":"1", "i":"0", "num":"0" },
+    deque:[1], removed:[], removedSide:"right", fresh:1,
+    window:[0,0], pollIdx:null, addIdx:0, num:0,
+    explain:"1 从队尾入队，队列变为 [1]，单调递减性质保持。" },
+  { bp:"L16", method:"add(3)", phase:"初始化窗口",
+    vars:{ "val":"3", "i":"1", "num":"0" },
+    deque:[1], removed:[], removedSide:"right", fresh:null,
+    window:[0,1], pollIdx:null, addIdx:1, num:0,
+    explain:"判断：队列非空且 val=3 > 队尾 1，条件为 true —— 3 即将挤掉队尾的 1。" },
+  { bp:"L17", method:"add(3)", phase:"初始化窗口",
+    vars:{ "val":"3", "i":"1", "num":"0" },
+    deque:[], removed:[1], removedSide:"right", fresh:null,
+    window:[0,1], pollIdx:null, addIdx:1, num:0,
+    explain:"removeLast()：1 被挤出队尾。因为 1 < 3 且 1 会先于 3 滑出窗口，1 不可能再成为任何后续窗口的最大值。" },
+  { bp:"L19", method:"add(3)", phase:"初始化窗口",
+    vars:{ "val":"3", "i":"1", "num":"0" },
+    deque:[3], removed:[], removedSide:"right", fresh:3,
+    window:[0,1], pollIdx:null, addIdx:1, num:0,
+    explain:"队列已空，while 再次判断 isEmpty 为 true 退出循环，3 入队成为队头。" },
+  { bp:"L16", method:"add(-1)", phase:"初始化窗口",
+    vars:{ "val":"-1", "i":"2", "num":"0" },
+    deque:[3], removed:[], removedSide:"right", fresh:null,
+    window:[0,2], pollIdx:null, addIdx:2, num:0,
+    explain:"val=-1 > 队尾 3？false —— 3 比 -1 大，不需要挤，-1 排到队尾即可。" },
+  { bp:"L19", method:"add(-1)", phase:"初始化窗口",
+    vars:{ "val":"-1", "i":"2", "num":"0" },
+    deque:[3,-1], removed:[], removedSide:"right", fresh:-1,
+    window:[0,2], pollIdx:null, addIdx:2, num:0,
+    explain:"-1 入队，队列 [3, -1] 保持单调递减。" },
+  { bp:"L42", method:"res[num++] = peek()", phase:"初始化窗口",
+    vars:{ "peek()":"3", "num":"1", "res[0]":"3" },
+    deque:[3,-1], removed:[], removedSide:"right", fresh:null,
+    window:[0,2], pollIdx:null, addIdx:null, num:1,
+    explain:"前 k=3 个元素入队完成，队头 peek()=3 就是第一个窗口 [1,3,-1] 的最大值，写入 res[0]，num 变为 1。" },
+
+  /* ---------- 主循环 i=3：poll(1) 不弹 / add(-3) / 写 res ---------- */
+  { bp:"L8", method:"poll(1)", phase:"滑动主循环",
+    vars:{ "val":"1 (nums[0])", "i":"3", "num":"1" },
+    deque:[3,-1], removed:[], removedSide:"left", fresh:null,
+    window:[1,3], pollIdx:0, addIdx:null, num:1,
+    explain:"窗口右移，左端 nums[0]=1 要移出窗口。判断 val(1) == deque.peek()(3)？false —— 1 在 add(3) 时早已被挤出队列，根本不在队列里，无需弹出。" },
+  { bp:"L16", method:"add(-3)", phase:"滑动主循环",
+    vars:{ "val":"-3 (nums[3])", "i":"3", "num":"1" },
+    deque:[3,-1], removed:[], removedSide:"right", fresh:null,
+    window:[1,3], pollIdx:0, addIdx:3, num:1,
+    explain:"val=-3 > 队尾 -1？false，不挤，-3 直接准备入队。" },
+  { bp:"L19", method:"add(-3)", phase:"滑动主循环",
+    vars:{ "val":"-3 (nums[3])", "i":"3", "num":"1" },
+    deque:[3,-1,-3], removed:[], removedSide:"right", fresh:-3,
+    window:[1,3], pollIdx:0, addIdx:3, num:1,
+    explain:"-3 入队，队列 [3, -1, -3] 仍然单调递减，队头 3 仍是当前窗口最大值。" },
+  { bp:"L49", method:"res[num++] = peek()", phase:"滑动主循环",
+    vars:{ "peek()":"3", "i":"3", "num":"2", "res[1]":"3" },
+    deque:[3,-1,-3], removed:[], removedSide:"right", fresh:null,
+    window:[1,3], pollIdx:null, addIdx:null, num:2,
+    explain:"队头 3 即窗口 [3,-1,-3] 的最大值，写入 res[1]，num=2。" },
+
+  /* ---------- 主循环 i=4：poll(3) 真弹出 / add(5) 连挤两个 ---------- */
+  { bp:"L8", method:"poll(3)", phase:"滑动主循环",
+    vars:{ "val":"3 (nums[1])", "i":"4", "num":"2" },
+    deque:[3,-1,-3], removed:[], removedSide:"left", fresh:null,
+    window:[2,4], pollIdx:1, addIdx:null, num:2,
+    explain:"左端 nums[1]=3 移出窗口。val(3) == peek()(3)？true！3 正是上一个窗口的最大值，真的存在队列里，必须弹出。" },
+  { bp:"L9", method:"poll(3)", phase:"滑动主循环",
+    vars:{ "val":"3 (nums[1])", "i":"4", "num":"2" },
+    deque:[-1,-3], removed:[3], removedSide:"left", fresh:null,
+    window:[2,4], pollIdx:1, addIdx:null, num:2,
+    explain:"deque.poll() 弹出队头 3，新队头是 -1。" },
+  { bp:"L16", method:"add(5)", phase:"滑动主循环",
+    vars:{ "val":"5 (nums[4])", "i":"4", "num":"2" },
+    deque:[-1,-3], removed:[], removedSide:"right", fresh:null,
+    window:[2,4], pollIdx:1, addIdx:4, num:2,
+    explain:"val=5 > 队尾 -3？true，进入循环开始挤元素。" },
+  { bp:"L17", method:"add(5)", phase:"滑动主循环",
+    vars:{ "val":"5 (nums[4])", "i":"4", "num":"2" },
+    deque:[-1], removed:[-3], removedSide:"right", fresh:null,
+    window:[2,4], pollIdx:1, addIdx:4, num:2,
+    explain:"removeLast()：-3 被 5 挤出 —— 5 比它大且更晚出窗，-3 不可能再成为任何窗口的最大值。" },
+  { bp:"L16", method:"add(5)", phase:"滑动主循环",
+    vars:{ "val":"5 (nums[4])", "i":"4", "num":"2" },
+    deque:[-1], removed:[], removedSide:"right", fresh:null,
+    window:[2,4], pollIdx:1, addIdx:4, num:2,
+    explain:"while 继续判断：5 > 队尾 -1？true，循环继续挤。" },
+  { bp:"L17", method:"add(5)", phase:"滑动主循环",
+    vars:{ "val":"5 (nums[4])", "i":"4", "num":"2" },
+    deque:[], removed:[-1], removedSide:"right", fresh:null,
+    window:[2,4], pollIdx:1, addIdx:4, num:2,
+    explain:"-1 也被挤出，队列清空 —— 5 比窗口内所有元素都大。" },
+  { bp:"L19", method:"add(5)", phase:"滑动主循环",
+    vars:{ "val":"5 (nums[4])", "i":"4", "num":"2" },
+    deque:[5], removed:[], removedSide:"right", fresh:5,
+    window:[2,4], pollIdx:1, addIdx:4, num:2,
+    explain:"队列已空，while 退出，5 入队，独占队列成为队头。" },
+  { bp:"L49", method:"res[num++] = peek()", phase:"滑动主循环",
+    vars:{ "peek()":"5", "i":"4", "num":"3", "res[2]":"5" },
+    deque:[5], removed:[], removedSide:"right", fresh:null,
+    window:[2,4], pollIdx:null, addIdx:null, num:3,
+    explain:"队头 5 即窗口 [-1,-3,5] 的最大值，写入 res[2]，num=3。" },
+
+  /* ---------- 主循环 i=5：poll(-1) 不弹 / add(3) / 写 res ---------- */
+  { bp:"L8", method:"poll(-1)", phase:"滑动主循环",
+    vars:{ "val":"-1 (nums[2])", "i":"5", "num":"3" },
+    deque:[5], removed:[], removedSide:"left", fresh:null,
+    window:[3,5], pollIdx:2, addIdx:null, num:3,
+    explain:"左端 nums[2]=-1 移出窗口。val(-1) == peek()(5)？false —— -1 在 add(5) 时已被挤出队列，无需处理。" },
+  { bp:"L16", method:"add(3)", phase:"滑动主循环",
+    vars:{ "val":"3 (nums[5])", "i":"5", "num":"3" },
+    deque:[5], removed:[], removedSide:"right", fresh:null,
+    window:[3,5], pollIdx:2, addIdx:5, num:3,
+    explain:"val=3 > 队尾（也是队头）5？false，3 比 5 小，直接排到队尾即可。" },
+  { bp:"L19", method:"add(3)", phase:"滑动主循环",
+    vars:{ "val":"3 (nums[5])", "i":"5", "num":"3" },
+    deque:[5,3], removed:[], removedSide:"right", fresh:3,
+    window:[3,5], pollIdx:2, addIdx:5, num:3,
+    explain:"3 入队，队列 [5, 3] 单调递减。" },
+  { bp:"L49", method:"res[num++] = peek()", phase:"滑动主循环",
+    vars:{ "peek()":"5", "i":"5", "num":"4", "res[3]":"5" },
+    deque:[5,3], removed:[], removedSide:"right", fresh:null,
+    window:[3,5], pollIdx:null, addIdx:null, num:4,
+    explain:"队头 5 即窗口 [-3,5,3] 的最大值，写入 res[3]，num=4。" },
+
+  /* ---------- 主循环 i=6：poll(-3) 不弹 / add(6) 连挤两个 ---------- */
+  { bp:"L8", method:"poll(-3)", phase:"滑动主循环",
+    vars:{ "val":"-3 (nums[3])", "i":"6", "num":"4" },
+    deque:[5,3], removed:[], removedSide:"left", fresh:null,
+    window:[4,6], pollIdx:3, addIdx:null, num:4,
+    explain:"左端 nums[3]=-3 移出窗口。-3 == peek()(5)？false —— 它在 add(5) 时早已被挤出队列。" },
+  { bp:"L16", method:"add(6)", phase:"滑动主循环",
+    vars:{ "val":"6 (nums[6])", "i":"6", "num":"4" },
+    deque:[5,3], removed:[], removedSide:"right", fresh:null,
+    window:[4,6], pollIdx:3, addIdx:6, num:4,
+    explain:"val=6 > 队尾 3？true，开始挤。" },
+  { bp:"L17", method:"add(6)", phase:"滑动主循环",
+    vars:{ "val":"6 (nums[6])", "i":"6", "num":"4" },
+    deque:[5], removed:[3], removedSide:"right", fresh:null,
+    window:[4,6], pollIdx:3, addIdx:6, num:4,
+    explain:"removeLast()：3 被 6 挤出队尾。" },
+  { bp:"L16", method:"add(6)", phase:"滑动主循环",
+    vars:{ "val":"6 (nums[6])", "i":"6", "num":"4" },
+    deque:[5], removed:[], removedSide:"right", fresh:null,
+    window:[4,6], pollIdx:3, addIdx:6, num:4,
+    explain:"while 继续判断：6 > 队尾 5？true，循环继续。" },
+  { bp:"L17", method:"add(6)", phase:"滑动主循环",
+    vars:{ "val":"6 (nums[6])", "i":"6", "num":"4" },
+    deque:[], removed:[5], removedSide:"right", fresh:null,
+    window:[4,6], pollIdx:3, addIdx:6, num:4,
+    explain:"5 也被挤出 —— 6 比窗口内所有元素都大且最晚出窗。" },
+  { bp:"L19", method:"add(6)", phase:"滑动主循环",
+    vars:{ "val":"6 (nums[6])", "i":"6", "num":"4" },
+    deque:[6], removed:[], removedSide:"right", fresh:6,
+    window:[4,6], pollIdx:3, addIdx:6, num:4,
+    explain:"队列已空，6 入队成为唯一元素兼队头。" },
+  { bp:"L49", method:"res[num++] = peek()", phase:"滑动主循环",
+    vars:{ "peek()":"6", "i":"6", "num":"5", "res[4]":"6" },
+    deque:[6], removed:[], removedSide:"right", fresh:null,
+    window:[4,6], pollIdx:null, addIdx:null, num:5,
+    explain:"队头 6 即窗口 [5,3,6] 的最大值，写入 res[4]，num=5。" },
+
+  /* ---------- 主循环 i=7：poll(5) 不弹 / add(7) / 写 res ---------- */
+  { bp:"L8", method:"poll(5)", phase:"滑动主循环",
+    vars:{ "val":"5 (nums[4])", "i":"7", "num":"5" },
+    deque:[6], removed:[], removedSide:"left", fresh:null,
+    window:[5,7], pollIdx:4, addIdx:null, num:5,
+    explain:"左端 nums[4]=5 移出窗口。5 == peek()(6)？false —— 5 在 add(6) 时已被挤出队列。" },
+  { bp:"L16", method:"add(7)", phase:"滑动主循环",
+    vars:{ "val":"7 (nums[7])", "i":"7", "num":"5" },
+    deque:[6], removed:[], removedSide:"right", fresh:null,
+    window:[5,7], pollIdx:4, addIdx:7, num:5,
+    explain:"val=7 > 队尾 6？true。" },
+  { bp:"L17", method:"add(7)", phase:"滑动主循环",
+    vars:{ "val":"7 (nums[7])", "i":"7", "num":"5" },
+    deque:[], removed:[6], removedSide:"right", fresh:null,
+    window:[5,7], pollIdx:4, addIdx:7, num:5,
+    explain:"removeLast()：6 被挤出队尾。" },
+  { bp:"L19", method:"add(7)", phase:"滑动主循环",
+    vars:{ "val":"7 (nums[7])", "i":"7", "num":"5" },
+    deque:[7], removed:[], removedSide:"right", fresh:7,
+    window:[5,7], pollIdx:4, addIdx:7, num:5,
+    explain:"7 入队，队列 [7]，7 就是最后一个窗口的最大值。" },
+  { bp:"L49", method:"res[num++] = peek()", phase:"滑动主循环",
+    vars:{ "peek()":"7", "i":"7", "num":"6", "res[5]":"7" },
+    deque:[7], removed:[], removedSide:"right", fresh:null,
+    window:[5,7], pollIdx:null, addIdx:null, num:6,
+    explain:"队头 7 即最后一个窗口 [3,6,7] 的最大值，写入 res[5]，num=6。主循环结束，返回 [3,3,5,5,6,7] ✓" }
+];
+
+/* ================= 页面数据 ================= */
+const NUMS = [1, 3, -1, -3, 5, 3, 6, 7];
+const RES_VALUES = [3, 3, 5, 5, 6, 7];
+const K = 3;
+
+let cur = 0;          // 当前步下标（0-based）
+let playing = false;
+let timer = null;
+
+/* ================= 渲染 ================= */
+const $ = id => document.getElementById(id);
+
+function renderCode() {
+  const box = $("codeBox");
+  const activeLine = parseInt(STEPS[cur].bp.slice(1), 10);
+  const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  let html = "";
+  CODE_SECTIONS.forEach(sec => {
+    html += '<div class="sec-title">' + sec.title + '（' + sec.start + '–' + sec.end + ' 行）</div>';
+    for (let no = sec.start; no <= sec.end; no++) {
+      const cls = ["code-line"];
+      if (BP_LINES.includes(no)) cls.push("has-bp");
+      if (no === activeLine) cls.push("active");
+      html += '<div class="' + cls.join(" ") + '"><span class="ln">' + no + '</span><span>' + esc(CODE_LINES[no - 1]) + "</span></div>";
+    }
+  });
+  box.innerHTML = html;
+}
+
+function renderNums() {
+  const s = STEPS[cur];
+  const row = $("numsRow");
+  row.innerHTML = "";
+  NUMS.forEach((v, i) => {
+    const box = document.createElement("div");
+    box.className = "cell-box";
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.textContent = v;
+    if (s.window && i >= s.window[0] && i <= s.window[1]) cell.classList.add("in-window");
+    if (i === s.pollIdx) cell.classList.add("polling");
+    if (i === s.addIdx) cell.classList.add("adding");
+    const idx = document.createElement("span");
+    idx.className = "idx";
+    idx.textContent = i;
+    const tag = document.createElement("span");
+    tag.className = "cell-tag";
+    if (i === s.pollIdx) { tag.className += " tag-poll"; tag.textContent = "← poll"; }
+    else if (i === s.addIdx) { tag.className += " tag-add"; tag.textContent = "add ↓"; }
+    box.appendChild(cell); box.appendChild(idx); box.appendChild(tag);
+    row.appendChild(box);
+  });
+}
+
+function renderDeque() {
+  const s = STEPS[cur];
+  const row = $("dequeRow");
+  row.innerHTML = "";
+  const front = document.createElement("span");
+  front.className = "dq-label";
+  front.innerHTML = "队头 <b>FRONT</b> →";
+  row.appendChild(front);
+
+  const ghosts = s.removed || [];
+  if (s.removedSide === "left") {
+    ghosts.forEach(v => {
+      const g = document.createElement("div");
+      g.className = "dq-cell ghost";
+      g.textContent = v;
+      row.appendChild(g);
+    });
+  }
+  if (s.deque.length === 0 && ghosts.length === 0) {
+    const e = document.createElement("span");
+    e.className = "dq-empty";
+    e.textContent = "（队列为空）";
+    row.appendChild(e);
+  }
+  s.deque.forEach((v, i) => {
+    const c = document.createElement("div");
+    c.className = "dq-cell";
+    if (s.fresh !== null && s.fresh !== undefined && i === s.deque.length - 1 && v === s.fresh) {
+      c.classList.add("fresh");
+    }
+    c.textContent = v;
+    row.appendChild(c);
+  });
+  if (s.removedSide === "right") {
+    ghosts.forEach(v => {
+      const g = document.createElement("div");
+      g.className = "dq-cell ghost";
+      g.textContent = v;
+      row.appendChild(g);
+    });
+  }
+  const rear = document.createElement("span");
+  rear.className = "dq-label";
+  rear.innerHTML = "→ <b>REAR</b> 队尾";
+  row.appendChild(rear);
+}
+
+function renderRes() {
+  const s = STEPS[cur];
+  const row = $("resRow");
+  row.innerHTML = "";
+  RES_VALUES.forEach((v, i) => {
+    const c = document.createElement("div");
+    c.className = "res-cell";
+    if (i < s.num) { c.classList.add("filled"); c.textContent = v; }
+    else { c.textContent = "?"; }
+    row.appendChild(c);
+  });
+}
+
+function renderStateBar() {
+  const s = STEPS[cur];
+  const bar = $("stateBar");
+  bar.innerHTML = "";
+  const bp = document.createElement("span");
+  bp.className = "bp-badge";
+  bp.textContent = "断点 · " + BP_LABEL[s.bp];
+  bar.appendChild(bp);
+  const ph = document.createElement("span");
+  ph.className = "phase-badge";
+  ph.textContent = s.phase;
+  bar.appendChild(ph);
+  Object.keys(s.vars).forEach(k => {
+    const chip = document.createElement("span");
+    chip.className = "var-chip";
+    chip.innerHTML = "<b>" + k + "</b> = " + s.vars[k];
+    bar.appendChild(chip);
+  });
+}
+
+function renderLog() {
+  const log = $("log");
+  let html = "";
+  // 最新消息展示在顶部：从当前步倒序渲染
+  for (let i = cur; i >= 0; i--) {
+    const s = STEPS[i];
+    const varsStr = Object.keys(s.vars).map(k => "<b>" + k + "</b>=" + s.vars[k]).join("  ");
+    let dqStr = "[" + s.deque.map(v => '<span class="chip">' + v + "</span>").join("") + "]";
+    if (s.removed && s.removed.length) {
+      dqStr += "  " + (s.removedSide === "left" ? "弹出队头" : "挤出队尾") + "：" +
+        s.removed.map(v => '<span class="chip out">' + v + "</span>").join("");
+    }
+    html +=
+      '<div class="log-entry' + (i === cur ? " current" : "") + '">' +
+        '<div class="log-head">' +
+          '<span class="log-no">#' + (i + 1) + "</span>" +
+          '<span class="log-method">' + s.method + "</span>" +
+          '<span class="log-bp">' + BP_LABEL[s.bp] + "</span>" +
+        "</div>" +
+        '<div class="log-vars">' + varsStr + "</div>" +
+        '<div class="log-deque">deque: ' + dqStr + "</div>" +
+        '<div class="log-explain">' + s.explain + "</div>" +
+      "</div>";
+  }
+  log.innerHTML = html;
+  log.scrollTop = 0;
+}
+
+function renderControls() {
+  $("btnPrev").disabled = cur === 0;
+  $("btnNext").disabled = cur === STEPS.length - 1;
+  $("progress").textContent = "第 " + (cur + 1) + " / " + STEPS.length + " 步";
+  $("btnPlay").textContent = playing ? "⏸ 暂停" : "▶ 自动播放";
+  $("summary").classList.toggle("hidden", cur !== STEPS.length - 1);
+}
+
+function renderAll() {
+  renderCode();
+  renderNums();
+  renderDeque();
+  renderRes();
+  renderStateBar();
+  renderLog();
+  renderControls();
+}
+
+/* ================= 交互 ================= */
+function goNext() {
+  if (cur < STEPS.length - 1) { cur++; renderAll(); }
+  else stopPlay();
+}
+function goPrev() {
+  if (cur > 0) { cur--; renderAll(); }
+}
+function reset() {
+  stopPlay();
+  cur = 0;
+  renderAll();
+}
+function startPlay() {
+  if (cur >= STEPS.length - 1) cur = -1; // 从头播放
+  playing = true;
+  timer = setInterval(() => {
+    if (cur < STEPS.length - 1) { cur++; renderAll(); }
+    else stopPlay();
+  }, 1600);
+  renderControls();
+}
+function stopPlay() {
+  playing = false;
+  if (timer) { clearInterval(timer); timer = null; }
+  renderControls();
+}
+
+$("btnNext").addEventListener("click", () => { stopPlay(); goNext(); });
+$("btnPrev").addEventListener("click", () => { stopPlay(); goPrev(); });
+$("btnReset").addEventListener("click", reset);
+$("btnPlay").addEventListener("click", () => playing ? stopPlay() : startPlay());
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight") { e.preventDefault(); stopPlay(); goNext(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); stopPlay(); goPrev(); }
+  else if (e.key === " ") { e.preventDefault(); playing ? stopPlay() : startPlay(); }
+});
+
+renderAll();
+</script>
+</body>
+</html>

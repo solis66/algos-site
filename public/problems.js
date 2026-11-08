@@ -1,7 +1,7 @@
 /* 本文件由 tools/build.py 自动生成，重新运行脚本会覆盖。
    小改文案可以直接手改，但下次 build 会被 meta.json 里的值覆盖。 */
 window.__PROBLEMS__ = {
-  "generatedAt": "2026-10-11 14:47:48",
+  "generatedAt": "2026-11-08 19:29:29",
   "site": {
     "title": "代码随想录刷题同步算法原理可视化site",
     "subtitle": "",
@@ -250,6 +250,34 @@ window.__PROBLEMS__ = {
       "fingerprint": "0e92f17a0c",
       "updated": "2026-10-11 14:42",
       "source": "leetcode_206_反转链表.html"
+    },
+    {
+      "id": "leetcode-239-sliding-window-maximum",
+      "order": 10,
+      "no": "239",
+      "platform": "LeetCode",
+      "title": "滑动窗口最大值",
+      "subtitle": "单调队列 · 断点调试轨迹",
+      "categories": [
+        "栈与队列"
+      ],
+      "tags": [
+        "单调队列",
+        "Deque",
+        "断点调试",
+        "滑动窗口"
+      ],
+      "level": "困难",
+      "language": "Java",
+      "theme": "light",
+      "summary": "自定义单调队列求滑动窗口最大值：按参考实现的断点轨迹逐帧回放，对照代码行号观察 poll 的「只在队头相等时弹出」、add 的「挤掉队尾再入队」如何共同维持队列单调递减、队头恒为当前窗口最大值。",
+      "complexity": "时间 O(n) · 空间 O(k)",
+      "category": "栈与队列",
+      "file": "problems/leetcode-239-sliding-window-maximum.html",
+      "bytes": 34123,
+      "fingerprint": "42d29aefea",
+      "updated": "2026-11-08 19:17",
+      "source": "leetcode239-monotonic-queue-debug.html"
     }
   ]
 };
